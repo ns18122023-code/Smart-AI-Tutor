@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz Generator - Smart AI Tutor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-accent/10 to-purple-500/10 rounded-2xl p-8 border border-white flex items-center justify-between shadow-sm">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
+                <i class="fa-solid fa-wand-magic-sparkles text-accent mr-3"></i> AI Quiz Generator
+            </h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">Generate custom quizzes on any topic instantly to test your knowledge.</p>
+        </div>
+    </div>
+
+    <!-- Generator Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+        <form class="space-y-6">
+            <div>
+                <label for="topic" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">What topic do you want to be tested on?</label>
+                <input type="text" id="topic" class="w-full px-4 py-3 bg-gray-50  dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent transition" placeholder="e.g. Data Structures, React Hooks, AWS basics..." required>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="difficulty" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Difficulty Level</label>
+                    <select id="difficulty" class="w-full px-4 py-3 bg-gray-50  dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent transition">
+                        <option value="easy">Easy (Beginner)</option>
+                        <option value="medium" selected>Medium (Intermediate)</option>
+                        <option value="hard">Hard (Advanced)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Question Type</label>
+                    <select id="type" class="w-full px-4 py-3 bg-gray-50  dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent transition">
+                        <option value="mcq">Multiple Choice</option>
+                        <option value="short">Short Answer</option>
+                        <option value="mixed">Mixed</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="button" id="generate-quiz-btn-form" class="w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-semibold py-4 rounded-lg shadow-md transition transform hover:-translate-y-0.5 flex justify-center items-center">
+                <i class="fa-solid fa-bolt mr-2"></i> Generate Quiz
+            </button>
+        </form>
+    </div>
+
+    <!-- Placeholder for Generated Quiz (Hidden initially) -->
+    <div id="quiz-area" class="hidden bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-gray-100 dark:border-slate-700 relative">
+        <!-- Mock Content -->
+        <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-white">Topic: Data Structures</h2>
+            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full uppercase tracking-wider">Medium</span>
+        </div>
+        
+        <div class="space-y-8">
+            <!-- Question 1 -->
+            <div>
+                <h3 class="font-semibold text-gray-800 dark:text-white mb-3"><span class="text-gray-400 mr-2">1.</span> Which data structure is based on the LIFO principle?</h3>
+                <div class="space-y-2">
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition">
+                        <input type="radio" name="q1" class="text-accent focus:ring-accent h-4 w-4">
+                        <span class="ml-3 text-gray-700 dark:text-gray-200">Queue</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition">
+                        <input type="radio" name="q1" class="text-accent focus:ring-accent h-4 w-4">
+                        <span class="ml-3 text-gray-700 dark:text-gray-200">Tree</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition bg-blue-50 border-blue-200">
+                        <input type="radio" name="q1" class="text-accent focus:ring-accent h-4 w-4" checked>
+                        <span class="ml-3 text-gray-700 dark:text-gray-200">Stack</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition">
+                        <input type="radio" name="q1" class="text-accent focus:ring-accent h-4 w-4">
+                        <span class="ml-3 text-gray-700 dark:text-gray-200">Linked List</span>
+                    </label>
+                </div>
+            </div>
+            
+            <button class="px-6 py-3 bg-accent text-white font-medium rounded-lg shadow-md hover:bg-cyan-600 transition">Submit Answers</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('generate-quiz-btn-form').addEventListener('click', function() {
+        const topic = document.getElementById('topic').value;
+        if (!topic) {
+            alert("Please enter a topic.");
+            return;
+        }
+        
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating...';
+        btn.disabled = true;
+        
+        fetch('/api/generate_quiz', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                topic: topic,
+                num_questions: 3 // Fixed for demo, can be dynamic
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.error) {
+                alert("Error: " + data.error);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                return;
+            }
+            
+            const quizArea = document.getElementById('quiz-area');
+            quizArea.classList.remove('hidden');
+            
+            // Update header
+            quizArea.querySelector('h2').innerText = 'Topic: ' + topic;
+            
+            // Render questions
+            const questionsContainer = quizArea.querySelector('.space-y-8');
+            questionsContainer.innerHTML = '';
+            
+            data.quiz.forEach((q, index) => {
+                let optionsHtml = '';
+                q.options.forEach((opt, optIndex) => {
+                    optionsHtml += `
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition">
+                        <input type="radio" name="q${index}" value="${optIndex}" data-answer="${q.answer}" class="text-accent focus:ring-accent h-4 w-4">
+                        <span class="ml-3 text-gray-700 dark:text-gray-200">${opt}</span>
+                    </label>
+                    `;
+                });
+                
+                const questionHtml = `
+                <div class="question-block">
+                    <h3 class="font-semibold text-gray-800 dark:text-white mb-3"><span class="text-gray-400 mr-2">${index + 1}.</span> ${q.question}</h3>
+                    <div class="space-y-2">
+                        ${optionsHtml}
+                    </div>
+                    <div class="explanation hidden mt-3 p-3 bg-blue-50 text-blue-800 text-sm rounded-lg border border-blue-100 dark:border-slate-700">
+                        <strong>Explanation:</strong> ${q.explanation}
+                    </div>
+                </div>
+                `;
+                questionsContainer.innerHTML += questionHtml;
+            });
+            
+            questionsContainer.innerHTML += `<button id="submit-quiz-btn" class="px-6 py-3 bg-accent text-white font-medium rounded-lg shadow-md hover:bg-cyan-600 transition">Submit Answers</button>`;
+            
+            document.getElementById('submit-quiz-btn').addEventListener('click', function() {
+                let score = 0;
+                const total = document.querySelectorAll('.question-block').length;
+                document.querySelectorAll('.question-block').forEach((block, index) => {
+                    const selected = block.querySelector(`input[name="q${index}"]:checked`);
+                    const explanation = block.querySelector('.explanation');
+                    if (selected) {
+                        const isCorrect = selected.value == selected.dataset.answer;
+                        if (isCorrect) score++;
+                        const parentLabel = selected.parentElement;
+                        if (isCorrect) {
+                            parentLabel.classList.add('bg-green-50', 'border-green-200');
+                        } else {
+                            parentLabel.classList.add('bg-red-50', 'border-red-200');
+                            // Highlight correct answer
+                            const correctInput = block.querySelector(`input[name="q${index}"][value="${selected.dataset.answer}"]`);
+                            if (correctInput) {
+                                correctInput.parentElement.classList.add('bg-green-50', 'border-green-200');
+                            }
+                        }
+                    } else {
+                         // Highlight correct answer if none selected
+                         const firstInput = block.querySelector(`input[name="q${index}"]`);
+                         if(firstInput){
+                             const correctInput = block.querySelector(`input[name="q${index}"][value="${firstInput.dataset.answer}"]`);
+                             if (correctInput) correctInput.parentElement.classList.add('bg-green-50', 'border-green-200');
+                         }
+                    }
+                    explanation.classList.remove('hidden');
+                });
+                this.style.display = 'none';
+                
+                // Submit score to backend
+                fetch('/api/submit_quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ score: score, topic: topic, num_questions: total })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Create beautiful, premium toast notification
+                    const toast = document.createElement('div');
+                    toast.className = "fixed bottom-5 right-5 bg-gradient-to-r from-accent to-purple-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 z-50 transform translate-y-10 opacity-0 transition-all duration-500";
+                    toast.innerHTML = `
+                        <div class="w-10 h-10 bg-white dark:bg-slate-800/20 rounded-full flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-trophy animate-bounce"></i></div>
+                        <div>
+                            <h4 class="font-bold">Quiz Submitted!</h4>
+                            <p class="text-xs text-white/90">Scored ${score}/${total} (${Math.round((score/total)*100)}%). Stats updated on Dashboard!</p>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => {
+                        toast.classList.remove('translate-y-10', 'opacity-0');
+                    }, 50);
+                    
+                    setTimeout(() => {
+                        toast.classList.add('translate-y-10', 'opacity-0');
+                        setTimeout(() => toast.remove(), 500);
+                    }, 4000);
+                });
+            });
+            
+            btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Quiz Generated';
+            btn.classList.replace('from-primary', 'from-green-500');
+            btn.classList.replace('to-secondary', 'to-green-600');
+            btn.disabled = false;
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to generate quiz.");
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+    });
+
+    // Auto-trigger if topic query parameter is present
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const topicParam = urlParams.get('topic');
+        if (topicParam) {
+            document.getElementById('topic').value = topicParam;
+            setTimeout(() => {
+                document.getElementById('generate-quiz-btn-form').click();
+            }, 300);
+        }
+    });
+</script>
+{% endblock %}

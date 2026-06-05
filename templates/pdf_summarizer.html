@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+
+{% block title %}PDF Summarizer - Smart AI Tutor{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto h-[calc(100vh-100px)] flex bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden relative animate-fade-in">
+    
+    <!-- Collapsible ChatGPT-style PDF Sidebar -->
+    <aside id="pdf-sidebar" class="w-64 bg-slate-900 text-white flex flex-col border-r border-slate-800 transition-all duration-300 shrink-0">
+        <!-- New Summary Header -->
+        <div class="p-4 border-b border-slate-800">
+            <button id="new-summary-sidebar-btn" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 border border-slate-700 shadow-sm">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>New Summary</span>
+            </button>
+        </div>
+        <!-- History List -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-1 select-none" id="pdf-history-list">
+            <h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider px-2 py-1">Saved Summaries</h4>
+            {% for summary in summaries %}
+            <div class="pdf-history-item group flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-800 cursor-pointer transition text-slate-300 hover:text-white" data-id="{{ summary.id }}" data-title="{{ summary.title }}">
+                <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
+                    <i class="fa-solid fa-file-pdf text-xs shrink-0 text-slate-500 group-hover:text-cyan-400"></i>
+                    <span class="text-xs truncate font-medium">{{ summary.title.replace('Summary: ', '') }}</span>
+                </div>
+                <div class="hidden hidden-summary-content">{{ summary.content }}</div>
+            </div>
+            {% else %}
+            <p class="text-slate-500 italic text-[11px] text-center py-6 px-4" id="no-history-msg">No saved summaries yet. Bookmark a summary to keep its history.</p>
+            {% endfor %}
+        </div>
+        <!-- Sidebar Toggle Trigger -->
+        <div class="p-3 border-t border-slate-800 text-center">
+            <button id="toggle-pdf-sidebar-btn" class="text-xs text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 mx-auto focus:outline-none">
+                <i class="fa-solid fa-angles-left"></i> <span>Hide Sidebar</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Sidebar Toggle Indicator (when hidden) -->
+    <button id="pdf-sidebar-indicator" class="absolute left-4 top-4 z-40 w-9 h-9 rounded-full bg-slate-900 text-white shadow-lg border border-slate-800 hover:bg-slate-800 flex items-center justify-center hidden opacity-0 transition-all duration-300">
+        <i class="fa-solid fa-angles-right"></i>
+    </button>
+
+    <!-- Main Workspace Pane -->
+    <div id="pdf-workspace-pane" class="flex-1 flex flex-col overflow-y-auto p-6 md:p-8 space-y-6 bg-slate-50/30 h-full">
+        <!-- Premium Header -->
+        <div class="bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent rounded-2xl p-6 md:p-8 border border-white flex flex-col md:flex-row md:items-center justify-between shadow-sm relative overflow-hidden shrink-0">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10"></div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
+                    <i class="fa-solid fa-file-pdf text-blue-600 mr-3"></i> AI PDF Summarizer
+                </h1>
+                <p class="text-gray-600 dark:text-gray-300 mt-2">Upload any PDF chapter, research paper, or lecture notes, and let the AI generate a clean, comprehensive markdown summary.</p>
+            </div>
+        </div>
+
+        <!-- Main Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 flex-1 min-h-0">
+            
+            <!-- Left: Upload Zone -->
+            <div class="lg:col-span-2 space-y-6 flex flex-col min-h-0">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex-1 flex flex-col justify-center min-h-[300px]">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center shrink-0"><i class="fa-solid fa-cloud-arrow-up text-blue-500 mr-2"></i> Upload Document</h3>
+                    
+                    <form id="summarizer-form" class="space-y-4 flex-1 flex flex-col justify-between">
+                        <!-- Dropzone -->
+                        <div id="dropzone" class="border-2 border-dashed border-gray-200 dark:border-slate-700 hover:border-blue-500 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition bg-gray-50/50 hover:bg-blue-50/10 group flex-1 flex justify-center">
+                            <input type="file" id="pdf-file-input" accept=".pdf" class="hidden" required>
+                            <div class="my-auto flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition duration-300">
+                                    <i class="fa-solid fa-file-arrow-up"></i>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Drag & Drop PDF here</p>
+                                <p class="text-xs text-gray-400 mt-1">or click to browse your files</p>
+                                <span class="text-[10px] text-gray-400 mt-3 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700">Supports PDF up to 25MB</span>
+                            </div>
+                        </div>
+
+                        <!-- Selected File Info -->
+                        <div id="file-info" class="hidden border border-blue-100 dark:border-slate-700 bg-blue-50/30 rounded-xl p-4 flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-file-pdf"></i></div>
+                            <div class="overflow-hidden flex-1">
+                                <p id="file-name" class="text-sm font-semibold text-gray-800 dark:text-white truncate">document.pdf</p>
+                                <p id="file-size" class="text-xs text-gray-500 dark:text-gray-400">2.4 MB</p>
+                            </div>
+                            <button type="button" id="remove-file-btn" class="text-gray-400 hover:text-red-500 text-lg transition"><i class="fa-solid fa-circle-xmark"></i></button>
+                        </div>
+
+                        <button type="submit" id="submit-summarize-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 flex justify-center items-center gap-2 mt-4 shrink-0">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Generate Summary</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Results Panel -->
+            <div class="lg:col-span-3 flex flex-col min-h-[400px]">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm h-full flex flex-col overflow-hidden">
+                    <!-- Panel Header -->
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50/50 shrink-0">
+                        <h3 class="font-bold text-gray-800 dark:text-white flex items-center"><i class="fa-solid fa-align-left text-indigo-500 mr-2"></i> AI Summary Output</h3>
+                        <div class="flex items-center space-x-2">
+                            <button id="download-summary-btn" disabled class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Download Summary as Markdown">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <button id="bookmark-summary-btn" disabled class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Save to Bookmarks">
+                                <i class="fa-regular fa-bookmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Panel Content -->
+                    <div id="summarizer-output" class="flex-1 p-6 overflow-y-auto min-h-0">
+                        <!-- Blank state -->
+                        <div id="output-blank-state" class="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-4 py-16">
+                            <div class="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-3xl text-slate-300">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-600 dark:text-gray-300 text-base">Summary Workspace</h4>
+                                <p class="text-sm max-w-xs mt-1">Upload a PDF on the left and click generate to begin your accelerated learning.</p>
+                            </div>
+                        </div>
+
+                        <!-- Loading state -->
+                        <div id="output-loading-state" class="hidden h-full flex flex-col items-center justify-center text-center space-y-4 py-16">
+                            <div class="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                            <div>
+                                <h4 class="font-bold text-gray-700 dark:text-gray-200">Reading & Summarizing...</h4>
+                                <p class="text-xs text-gray-400 mt-1">Gemini AI is parsing the document layout, reading text, and formatting your breakdown.</p>
+                            </div>
+                        </div>
+
+                        <!-- Summary Content area -->
+                        <div id="output-content-area" class="hidden prose   prose dark:prose-invert prose-slate max-w-none text-gray-800 dark:text-white">
+                            <!-- Content gets loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('pdf-file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const removeFileBtn = document.getElementById('remove-file-btn');
+        const summarizerForm = document.getElementById('summarizer-form');
+        const submitBtn = document.getElementById('submit-summarize-btn');
+        
+        const outputBlank = document.getElementById('output-blank-state');
+        const outputLoading = document.getElementById('output-loading-state');
+        const outputContent = document.getElementById('output-content-area');
+        const bookmarkBtn = document.getElementById('bookmark-summary-btn');
+        const downloadBtn = document.getElementById('download-summary-btn');
+
+        // Sidebar Elements
+        const pdfSidebar = document.getElementById('pdf-sidebar');
+        const pdfSidebarIndicator = document.getElementById('pdf-sidebar-indicator');
+        const togglePdfSidebarBtn = document.getElementById('toggle-pdf-sidebar-btn');
+        const newSummarySidebarBtn = document.getElementById('new-summary-sidebar-btn');
+        const pdfHistoryList = document.getElementById('pdf-history-list');
+
+        let lastGeneratedSummary = "";
+        let lastGeneratedMarkdown = "";
+        let lastGeneratedTitle = "";
+
+        // Helper to convert rich HTML output back to clean formatted Markdown
+        function htmlToMarkdown(html) {
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html;
+            
+            let md = tempDiv.innerHTML
+                .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+                .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+                .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+                .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+                .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+                .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+                .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+                .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+                .replace(/<ul[^>]*>/gi, '')
+                .replace(/<\/ul>/gi, '\n')
+                .replace(/<li[^>]*>(.*?)<\/li>/gi, '* $1\n')
+                .replace(/<br\s*\/?>/gi, '\n');
+                
+            const formatter = document.createElement("div");
+            formatter.innerHTML = md;
+            return (formatter.textContent || formatter.innerText || "").trim();
+        }
+
+        // Sidebar interactions (Toggles and Hide/Show)
+        if (togglePdfSidebarBtn && pdfSidebar && pdfSidebarIndicator) {
+            togglePdfSidebarBtn.addEventListener('click', function() {
+                pdfSidebar.classList.add('-ml-64');
+                setTimeout(() => {
+                    pdfSidebarIndicator.classList.remove('hidden');
+                    pdfSidebarIndicator.classList.add('opacity-100');
+                }, 300);
+            });
+
+            pdfSidebarIndicator.addEventListener('click', function() {
+                pdfSidebarIndicator.classList.remove('opacity-100');
+                setTimeout(() => {
+                    pdfSidebarIndicator.classList.add('hidden');
+                    pdfSidebar.classList.remove('-ml-64');
+                }, 200);
+            });
+        }
+
+        // "+ New Summary" Trigger
+        if (newSummarySidebarBtn) {
+            newSummarySidebarBtn.addEventListener('click', function() {
+                // Clear inputs
+                fileInput.value = "";
+                fileInfo.classList.add('hidden');
+                dropzone.classList.remove('hidden');
+                
+                // Reset outputs
+                outputContent.innerHTML = "";
+                outputContent.classList.add('hidden');
+                outputLoading.classList.add('hidden');
+                outputBlank.classList.remove('hidden');
+                
+                // Clear stored state
+                lastGeneratedSummary = "";
+                lastGeneratedMarkdown = "";
+                lastGeneratedTitle = "";
+                
+                // Disable header action buttons
+                bookmarkBtn.disabled = true;
+                bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed";
+                
+                downloadBtn.disabled = true;
+                downloadBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed";
+
+                // Remove active classes in sidebar
+                document.querySelectorAll('.pdf-history-item').forEach(item => {
+                    item.classList.remove('bg-slate-800', 'text-white', 'font-semibold');
+                    item.classList.add('text-slate-300');
+                });
+            });
+        }
+
+        // Hook history sidebar item click events
+        function setupHistoryItemClick(item) {
+            item.addEventListener('click', function() {
+                // Highlight item
+                document.querySelectorAll('.pdf-history-item').forEach(i => {
+                    i.classList.remove('bg-slate-800', 'text-white', 'font-semibold');
+                    i.classList.add('text-slate-300');
+                });
+                this.classList.add('bg-slate-800', 'text-white', 'font-semibold');
+                this.classList.remove('text-slate-300');
+
+                // Extract and load content
+                const content = this.querySelector('.hidden-summary-content').innerHTML;
+                const title = this.getAttribute('data-title');
+
+                lastGeneratedSummary = content;
+                lastGeneratedTitle = title;
+                lastGeneratedMarkdown = htmlToMarkdown(content);
+
+                outputBlank.classList.add('hidden');
+                outputLoading.classList.add('hidden');
+                outputContent.innerHTML = content;
+                outputContent.classList.remove('hidden');
+
+                // Enable action buttons & style bookmark button as active (solid teal)
+                bookmarkBtn.disabled = false;
+                bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark text-accent"></i>';
+                bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-accent hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition font-bold";
+
+                downloadBtn.disabled = false;
+                downloadBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-blue-600 hover:text-blue-700 flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition";
+            });
+        }
+
+        document.querySelectorAll('.pdf-history-item').forEach(setupHistoryItemClick);
+
+        // Drag & Drop Interactions
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-blue-500', 'bg-blue-50/10');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50/10');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50/10');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelected();
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelected);
+
+        function handleFileSelected() {
+            if (!fileInput.files.length) return;
+            const file = fileInput.files[0];
+            
+            if (!file.name.endsWith('.pdf')) {
+                alert("Please upload a PDF file only.");
+                fileInput.value = "";
+                return;
+            }
+
+            fileName.innerText = file.name;
+            fileSize.innerText = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+            
+            dropzone.classList.add('hidden');
+            fileInfo.classList.remove('hidden');
+        }
+
+        removeFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = "";
+            fileInfo.classList.add('hidden');
+            dropzone.classList.remove('hidden');
+        });
+
+        // Form Submit
+        summarizerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!fileInput.files.length) return;
+
+            // Update UI states
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing PDF...';
+            
+            outputBlank.classList.add('hidden');
+            outputContent.classList.add('hidden');
+            outputLoading.classList.remove('hidden');
+            
+            bookmarkBtn.disabled = true;
+            bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+            bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 flex items-center justify-center border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed";
+            
+            downloadBtn.disabled = true;
+            downloadBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 flex items-center justify-center border border-gray-100 dark:border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed";
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/api/summarize_pdf', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> Generate Summary';
+                outputLoading.classList.add('hidden');
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    outputBlank.classList.remove('hidden');
+                    return;
+                }
+
+                lastGeneratedSummary = data.summary;
+                lastGeneratedMarkdown = data.raw_markdown || "";
+                lastGeneratedTitle = "Summary: " + fileInput.files[0].name.replace('.pdf', '');
+
+                outputContent.innerHTML = data.summary;
+                outputContent.classList.remove('hidden');
+                
+                bookmarkBtn.disabled = false;
+                bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-accent hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition";
+                
+                downloadBtn.disabled = false;
+                downloadBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-blue-600 hover:text-blue-700 flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition";
+            })
+            .catch(err => {
+                console.error(err);
+                alert("An error occurred during summarization.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> Generate Summary';
+                outputLoading.classList.add('hidden');
+                outputBlank.classList.remove('hidden');
+            });
+        });
+
+        // Bookmark and Toggling Bookmark event
+        bookmarkBtn.addEventListener('click', function() {
+            bookmarkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            bookmarkBtn.disabled = true;
+
+            fetch('/api/bookmarks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'pdf',
+                    title: lastGeneratedTitle,
+                    content: lastGeneratedSummary
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                bookmarkBtn.disabled = false;
+                if (data.success) {
+                    if (data.action === 'added') {
+                        bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark text-accent"></i>';
+                        bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-accent hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition font-bold";
+                        
+                        // Dynamically append new bookmark item to history list sidebar
+                        const noHistMsg = document.getElementById('no-history-msg');
+                        if (noHistMsg) {
+                            noHistMsg.remove();
+                        }
+                        
+                        // Check if item already exists to avoid redundant UI elements
+                        let existingItem = document.querySelector(`.pdf-history-item[data-title="${lastGeneratedTitle}"]`);
+                        if (!existingItem) {
+                            const newHistoryItem = document.createElement('div');
+                            newHistoryItem.className = "pdf-history-item group flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-800 cursor-pointer transition text-slate-300 hover:text-white bg-slate-800 text-white font-semibold";
+                            newHistoryItem.setAttribute('data-title', lastGeneratedTitle);
+                            newHistoryItem.innerHTML = `
+                                <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
+                                    <i class="fa-solid fa-file-pdf text-xs shrink-0 text-cyan-400"></i>
+                                    <span class="text-xs truncate font-medium">${lastGeneratedTitle.replace('Summary: ', '')}</span>
+                                </div>
+                                <div class="hidden hidden-summary-content">${lastGeneratedSummary}</div>
+                            `;
+                            
+                            // Highlight the newly created item and de-highlight others
+                            document.querySelectorAll('.pdf-history-item').forEach(i => {
+                                i.classList.remove('bg-slate-800', 'text-white', 'font-semibold');
+                                i.classList.add('text-slate-300');
+                            });
+                            
+                            pdfHistoryList.insertBefore(newHistoryItem, pdfHistoryList.querySelector('h4').nextSibling);
+                            setupHistoryItemClick(newHistoryItem);
+                        }
+
+                        // Trigger toast alert
+                        const toast = document.createElement('div');
+                        toast.className = "fixed bottom-5 right-5 bg-gradient-to-r from-accent to-purple-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 z-50 transform translate-y-10 opacity-0 transition-all duration-500";
+                        toast.innerHTML = `
+                            <div class="w-10 h-10 bg-white dark:bg-slate-800/20 rounded-full flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+                            <div>
+                                <h4 class="font-bold">Summary Bookmarked!</h4>
+                                <p class="text-xs text-white/90">Saved under Bookmarks workspace.</p>
+                            </div>
+                        `;
+                        document.body.appendChild(toast);
+                        setTimeout(() => {
+                            toast.classList.remove('translate-y-10', 'opacity-0');
+                        }, 50);
+                        
+                        setTimeout(() => {
+                            toast.classList.add('translate-y-10', 'opacity-0');
+                            setTimeout(() => toast.remove(), 500);
+                        }, 4000);
+                    } else {
+                        // Toggle off: action === 'removed'
+                        bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                        bookmarkBtn.className = "w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-accent flex items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700 transition";
+                        
+                        // Dynamically remove the bookmarked item from history list
+                        let existingItem = document.querySelector(`.pdf-history-item[data-title="${lastGeneratedTitle}"]`);
+                        if (existingItem) {
+                            existingItem.classList.add('scale-75', 'opacity-0');
+                            setTimeout(() => {
+                                existingItem.remove();
+                                // If list is now empty, add back empty state message
+                                if (pdfHistoryList.querySelectorAll('.pdf-history-item').length === 0) {
+                                    const p = document.createElement('p');
+                                    p.id = "no-history-msg";
+                                    p.className = "text-slate-500 italic text-[11px] text-center py-6 px-4";
+                                    p.innerText = "No saved summaries yet. Bookmark a summary to keep its history.";
+                                    pdfHistoryList.appendChild(p);
+                                }
+                            }, 300);
+                        }
+                        
+                        alert("Bookmark removed!");
+                    }
+                } else {
+                    bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                    alert("Failed to update bookmark.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                bookmarkBtn.disabled = false;
+                alert("Failed to save bookmark.");
+            });
+        });
+
+        // Download Event
+        downloadBtn.addEventListener('click', function() {
+            if (!lastGeneratedMarkdown) return;
+            const filename = lastGeneratedTitle.replace('Summary: ', '') + "_summary.md";
+            const blob = new Blob([lastGeneratedMarkdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+
+<style>
+    /* Styling for markdown content returned by backend */
+    .prose h1, .prose h2, .prose h3 {
+        color: #0f172a;
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .dark .prose h1,
+    .dark .prose h2,
+    .dark .prose h3 {
+        color: #f8fafc;
+    }
+
+    .prose p {
+        margin-bottom: 1em;
+        line-height: 1.6;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .prose strong {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .dark .prose strong {
+        color: #f8fafc;
+    }
+
+    .prose pre {
+        background-color: #1e293b;
+        color: #f8fafc;
+        padding: 1em;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 1em;
+    }
+
+    .dark .prose pre {
+        background-color: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+    }
+
+    .prose code {
+        background-color: #f1f5f9;
+        padding: 0.2em 0.4em;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+        color: #db2777;
+    }
+
+    .dark .prose code {
+        background-color: #334155;
+        color: #f472b6;
+    }
+</style>
+{% endblock %}
+

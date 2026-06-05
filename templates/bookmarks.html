@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Bookmarks - Smart AI Tutor{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
+    
+    <!-- Premium Header -->
+    <div class="bg-gradient-to-r from-purple-600/10 via-accent/5 to-transparent rounded-2xl p-6 md:p-8 border border-white flex flex-col md:flex-row md:items-center justify-between shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
+        <div class="flex-1">
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
+                <i class="fa-solid fa-bookmark text-purple-600 mr-3"></i> Bookmarks Workspace
+            </h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">Manage all your saved tutor explanations, generated summaries, and chat session notes in one centralized notebook.</p>
+        </div>
+        
+        <!-- Premium Search Bar -->
+        <div class="mt-4 md:mt-0 relative w-full md:w-80">
+            <input type="text" id="bookmark-search" placeholder="Search saved resources..." 
+                class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition shadow-sm text-gray-800 dark:text-white text-sm">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400 text-xs"></i>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-2 px-1">
+        <button class="filter-btn text-xs font-semibold px-4 py-2 bg-purple-600 text-white rounded-full shadow-sm hover:shadow transition" data-filter="all">All Items</button>
+        <button class="filter-btn text-xs font-semibold px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition" data-filter="concept">Concepts</button>
+        <button class="filter-btn text-xs font-semibold px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition" data-filter="chat">Tutor Explanations</button>
+        <button class="filter-btn text-xs font-semibold px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition" data-filter="pdf">PDF Summaries</button>
+        <button class="filter-btn text-xs font-semibold px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition" data-filter="session">Saved Sessions</button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="bookmarks-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for bookmark in bookmarks %}
+        <div class="bookmark-card bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition duration-300 relative group overflow-hidden" 
+             data-id="{{ bookmark.id }}" data-type="{{ bookmark.type or 'concept' }}" data-title="{{ bookmark.title }}">
+            
+            <div class="absolute top-0 left-0 w-1.5 h-full {% if bookmark.type == 'pdf' %}bg-blue-500{% elif bookmark.type == 'chat' %}bg-purple-500{% elif bookmark.type == 'session' %}bg-green-500{% else %}bg-amber-500{% endif %}"></div>
+
+            <div>
+                <!-- Card Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded {% if bookmark.type == 'pdf' %}bg-blue-50 text-blue-600{% elif bookmark.type == 'chat' %}bg-purple-50 text-purple-600{% elif bookmark.type == 'session' %}bg-green-50 text-green-600{% else %}bg-amber-50 text-amber-600{% endif %}">
+                        {% if bookmark.type == 'pdf' %}<i class="fa-solid fa-file-pdf mr-1"></i> PDF Summary
+                        {% elif bookmark.type == 'chat' %}<i class="fa-solid fa-robot mr-1"></i> Chat
+                        {% elif bookmark.type == 'session' %}<i class="fa-solid fa-comments mr-1"></i> Session
+                        {% else %}<i class="fa-solid fa-lightbulb mr-1"></i> Concept
+                        {% endif %}
+                    </span>
+                    <button class="delete-btn text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition duration-200 focus:outline-none" title="Delete Bookmark">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Title & Body Excerpt -->
+                <h3 class="font-bold text-gray-800 dark:text-white text-base leading-snug line-clamp-2 mb-2 group-hover:text-purple-600 transition">{{ bookmark.title }}</h3>
+                <div class="bookmark-excerpt text-gray-500 dark:text-gray-400 text-xs line-clamp-3 leading-relaxed mb-4">
+                    {{ bookmark.content | striptags | truncate(150) | safe }}
+                </div>
+            </div>
+
+            <!-- Footer info -->
+            <div class="border-t border-gray-50 pt-3 mt-auto flex items-center justify-between text-gray-400 text-[10px]">
+                <span><i class="fa-regular fa-clock mr-1"></i> {{ bookmark.created_at }}</span>
+                <button class="view-details-btn font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1 focus:outline-none">
+                    View Contents <i class="fa-solid fa-angle-right transition group-hover:translate-x-0.5"></i>
+                </button>
+            </div>
+
+            <!-- Full hidden content for detail viewing -->
+            <div class="hidden-full-content hidden">
+                {{ bookmark.content | safe }}
+            </div>
+        </div>
+        {% else %}
+        <div id="no-bookmarks-placeholder" class="col-span-full bg-white dark:bg-slate-800 rounded-2xl border border-gray-150 py-16 text-center flex flex-col items-center justify-center space-y-4 shadow-inner">
+            <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-2xl text-slate-300">
+                <i class="fa-solid fa-bookmark-slash"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-700 dark:text-gray-200">No saved resources yet</h4>
+                <p class="text-xs text-gray-400 mt-1">Bookmarked explanations and summaries will appear here.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty state for search filters -->
+    <div id="empty-search-placeholder" class="hidden bg-white dark:bg-slate-800 rounded-2xl border border-gray-150 py-16 text-center flex flex-col items-center justify-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-2xl text-slate-300">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <div>
+            <h4 class="font-bold text-gray-700 dark:text-gray-200">No matching items found</h4>
+            <p class="text-xs text-gray-400 mt-1">Try tweaking your search term or select a different filter category.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Beautiful Detail Modal -->
+<div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-all duration-300">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-3xl h-[80vh] flex flex-col shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-95 transition-all duration-300" id="detailModalContent">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50/50">
+            <div class="flex items-center space-x-3">
+                <span id="modal-type-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">CONCEPT</span>
+                <h3 id="modal-title" class="font-bold text-gray-800 dark:text-white text-base truncate max-w-lg">Bookmark Detail</h3>
+            </div>
+            <button id="closeDetailModalBtn" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 focus:outline-none"><i class="fa-solid fa-times text-lg"></i></button>
+        </div>
+
+        <!-- Modal Content (Rendered Prose) -->
+        <div class="flex-1 p-6 overflow-y-auto prose   prose dark:prose-invert prose-slate max-w-none text-gray-800 dark:text-white" id="modal-body-content">
+            <!-- Full HTML content loaded here -->
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex justify-between bg-gray-50/50">
+            <button id="modal-download-btn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm shadow-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-download"></i>
+                <span>Download Notes</span>
+            </button>
+            <button id="modal-close-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:text-gray-200 font-semibold rounded-lg text-sm shadow-sm transition">Close Preview</button>
+        </div>
+    </div>
+</div>
+
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('bookmark-search');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const cards = document.querySelectorAll('.bookmark-card');
+        const emptyPlaceholder = document.getElementById('empty-search-placeholder');
+        const noBookmarksPlaceholder = document.getElementById('no-bookmarks-placeholder');
+
+        const detailModal = document.getElementById('detailModal');
+        const detailModalContent = document.getElementById('detailModalContent');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body-content');
+        const modalBadge = document.getElementById('modal-type-badge');
+        const closeDetailBtn = document.getElementById('closeDetailModalBtn');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        let activeFilter = 'all';
+
+        // Search & Filter functionality
+        if (searchInput) {
+            searchInput.addEventListener('input', performFilterAndSearch);
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-purple-600', 'text-white', 'shadow-sm');
+                    b.classList.add('bg-white', 'dark:bg-slate-800', 'border', 'border-gray-200', 'dark:border-slate-700', 'text-gray-600', 'dark:text-gray-300');
+                });
+                
+                this.classList.remove('bg-white', 'dark:bg-slate-800', 'border', 'border-gray-200', 'dark:border-slate-700', 'text-gray-600', 'dark:text-gray-300');
+                this.classList.add('bg-purple-600', 'text-white', 'shadow-sm');
+                
+                activeFilter = this.getAttribute('data-filter');
+                performFilterAndSearch();
+            });
+        });
+
+        function performFilterAndSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const type = card.getAttribute('data-type');
+                const title = card.getAttribute('data-title').toLowerCase();
+                const text = card.querySelector('.bookmark-excerpt').textContent.toLowerCase();
+
+                const matchesFilter = (activeFilter === 'all' || type === activeFilter);
+                const matchesSearch = (title.includes(query) || text.includes(query));
+
+                if (matchesFilter && matchesSearch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            // Handle placeholders
+            if (visibleCount === 0) {
+                if (cards.length === 0) {
+                    if (noBookmarksPlaceholder) {
+                        noBookmarksPlaceholder.classList.remove('hidden');
+                        const h4 = noBookmarksPlaceholder.querySelector('h4');
+                        if (activeFilter === 'all') h4.innerText = "No saved resources yet";
+                        else if (activeFilter === 'concept') h4.innerText = "No saved Concepts yet";
+                        else if (activeFilter === 'chat') h4.innerText = "No Tutor Explanations saved yet";
+                        else if (activeFilter === 'pdf') h4.innerText = "No PDF Summaries saved yet";
+                        else if (activeFilter === 'session') h4.innerText = "No Chat Sessions saved yet";
+                    }
+                    emptyPlaceholder.classList.add('hidden');
+                } else {
+                    if (noBookmarksPlaceholder) noBookmarksPlaceholder.classList.add('hidden');
+                    emptyPlaceholder.classList.remove('hidden');
+                    const h4 = emptyPlaceholder.querySelector('h4');
+                    if (query === '') {
+                        if (activeFilter === 'concept') h4.innerText = "No saved Concepts yet";
+                        else if (activeFilter === 'chat') h4.innerText = "No Tutor Explanations saved yet";
+                        else if (activeFilter === 'pdf') h4.innerText = "No PDF Summaries saved yet";
+                        else if (activeFilter === 'session') h4.innerText = "No Chat Sessions saved yet";
+                    } else {
+                        h4.innerText = "No matching items found";
+                    }
+                }
+            } else {
+                if (noBookmarksPlaceholder) noBookmarksPlaceholder.classList.add('hidden');
+                emptyPlaceholder.classList.add('hidden');
+            }
+        }
+
+        // Delete bookmark
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                
+                const card = this.closest('.bookmark-card');
+                const bookmarkId = card.getAttribute('data-id');
+                const title = card.getAttribute('data-title');
+
+                if (confirm(`Are you sure you want to delete the bookmark "${title}"?`)) {
+                    fetch(`/api/bookmarks/${bookmarkId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            card.classList.add('scale-75', 'opacity-0');
+                            setTimeout(() => {
+                                card.remove();
+                                // Trigger filter/placeholder recalculations
+                                performFilterAndSearch();
+                            }, 300);
+
+                            // Beautiful premium toast
+                            const toast = document.createElement('div');
+                            toast.className = "fixed bottom-5 right-5 bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 z-50 transform translate-y-10 opacity-0 transition-all duration-500";
+                            toast.innerHTML = `
+                                <div class="w-10 h-10 bg-white dark:bg-slate-800/20 rounded-full flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-trash-can"></i></div>
+                                <div>
+                                    <h4 class="font-bold">Bookmark Deleted!</h4>
+                                    <p class="text-xs text-white/90">Successfully removed from your notebooks.</p>
+                                </div>
+                            `;
+                            document.body.appendChild(toast);
+                            setTimeout(() => {
+                                toast.classList.remove('translate-y-10', 'opacity-0');
+                            }, 50);
+                            
+                            setTimeout(() => {
+                                toast.classList.add('translate-y-10', 'opacity-0');
+                                  setTimeout(() => toast.remove(), 500);
+                            }, 4000);
+                        } else {
+                            alert("Failed to delete bookmark.");
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("An error occurred during deletion.");
+                    });
+                }
+            });
+        });
+
+        // Detail Modal Interactions
+        let activeModalType = "";
+        let activeModalTitle = "";
+        let activeModalContent = "";
+
+        function openDetailModal(type, title, htmlContent) {
+            activeModalType = type;
+            activeModalTitle = title;
+            activeModalContent = htmlContent;
+
+            modalTitle.innerText = title;
+            modalBody.innerHTML = htmlContent;
+            
+            // Set type badges classes
+            modalBadge.innerText = type.toUpperCase();
+            modalBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded";
+            
+            if (type === 'pdf') {
+                modalBadge.classList.add('bg-blue-50', 'text-blue-600');
+            } else if (type === 'chat') {
+                modalBadge.classList.add('bg-purple-50', 'text-purple-600');
+            } else if (type === 'session') {
+                modalBadge.classList.add('bg-green-50', 'text-green-600');
+            } else {
+                modalBadge.classList.add('bg-amber-50', 'text-amber-600');
+            }
+
+            detailModal.classList.remove('hidden');
+            setTimeout(() => {
+                detailModal.classList.remove('opacity-0');
+                detailModalContent.classList.remove('scale-95');
+            }, 10);
+
+            // Re-render LaTeX math if present in detailed content
+            if (window.MathJax) {
+                MathJax.typesetPromise().catch((err) => console.log('MathJax error: ', err));
+            }
+        }
+
+        // Hook up Download Notes button
+        const modalDownloadBtn = document.getElementById('modal-download-btn');
+        modalDownloadBtn.addEventListener('click', function() {
+            if (!activeModalContent) return;
+
+            // Strip HTML to get clean text for the note file
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = activeModalContent;
+            
+            // Format slightly to maintain spacing for double line breaks
+            let text = tempDiv.innerHTML
+                .replace(/<p[^>]*>/g, '')
+                .replace(/<\/p>/g, '\n\n')
+                .replace(/<br\s*\/?>/g, '\n')
+                .replace(/<li[^>]*>/g, '• ')
+                .replace(/<\/li>/g, '\n')
+                .replace(/<h[1-6][^>]*>/g, '\n# ')
+                .replace(/<\/h[1-6]>/g, '\n');
+            
+            const formatter = document.createElement("div");
+            formatter.innerHTML = text;
+            const plainText = formatter.textContent || formatter.innerText || "";
+            
+            const sanitizedTitle = activeModalTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const filename = sanitizedTitle + "_notes.txt";
+            const blob = new Blob([plainText.trim()], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        function closeDetailModal() {
+            detailModal.classList.add('opacity-0');
+            detailModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                detailModal.classList.add('hidden');
+            }, 300);
+        }
+
+        cards.forEach(card => {
+            const viewBtn = card.querySelector('.view-details-btn');
+            const type = card.getAttribute('data-type');
+            const title = card.getAttribute('data-title');
+            const fullContent = card.querySelector('.hidden-full-content').innerHTML;
+
+            // Click on card body OR view details btn opens modal
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('.delete-btn')) return;
+                openDetailModal(type, title, fullContent);
+            });
+        });
+
+        if (closeDetailBtn) closeDetailBtn.addEventListener('click', closeDetailModal);
+        if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeDetailModal);
+
+        detailModal.addEventListener('click', function(e) {
+            if (e.target === detailModal) closeDetailModal();
+        });
+    });
+</script>
+
+<style>
+    /* Styling for markdown content returned by backend */
+    .prose h1, .prose h2, .prose h3 {
+        color: #0f172a;
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .dark .prose h1,
+    .dark .prose h2,
+    .dark .prose h3 {
+        color: #f8fafc;
+    }
+
+    .prose p {
+        margin-bottom: 1em;
+        line-height: 1.6;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .prose strong {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .dark .prose strong {
+        color: #f8fafc;
+    }
+
+    .prose pre {
+        background-color: #1e293b;
+        color: #f8fafc;
+        padding: 1em;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 1em;
+    }
+
+    .dark .prose pre {
+        background-color: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+    }
+
+    .prose code {
+        background-color: #f1f5f9;
+        padding: 0.2em 0.4em;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+        color: #db2777;
+    }
+
+    .dark .prose code {
+        background-color: #334155;
+        color: #f472b6;
+    }
+</style>
+{% endblock %}

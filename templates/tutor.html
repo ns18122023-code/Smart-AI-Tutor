@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}AI Tutor - Smart AI Tutor{% endblock %}
+
+{% block content %}
+<div
+    class="max-w-6xl mx-auto h-[calc(100vh-100px)] flex bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden relative">
+
+    <!-- Collapsible ChatGPT-style Sidebar -->
+    <aside id="chat-sidebar" class="w-64 bg-slate-900 text-white flex flex-col border-r border-slate-800 transition-all duration-300 shrink-0">
+        <!-- New Session Header -->
+        <div class="p-4 border-b border-slate-800">
+            <button id="new-session-sidebar-btn" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 border border-slate-700 shadow-sm">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>New Session</span>
+            </button>
+        </div>
+        <!-- Session List -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-1 select-none" id="session-history-list">
+            <h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider px-2 py-1">Recent Chats</h4>
+            {% for sess in history %}
+            <div class="session-item group flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-800 cursor-pointer transition text-slate-300 hover:text-white" data-id="{{ sess.id }}">
+                <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
+                    <i class="fa-solid fa-clock-rotate-left text-xs shrink-0 text-slate-500 group-hover:text-cyan-400"></i>
+                    <span class="text-xs truncate font-medium">{{ sess.title.replace('Summary: ', '').replace('AI Tutor: ', '') }}</span>
+                </div>
+                <div class="hidden hidden-session-content">{{ sess.content | safe }}</div>
+            </div>
+            {% else %}
+            <p class="text-slate-500 italic text-[11px] text-center py-6 px-4">No recent chats. Start asking questions!</p>
+            {% endfor %}
+        </div>
+        <!-- Sidebar Toggle Trigger -->
+        <div class="p-3 border-t border-slate-800 text-center">
+            <button id="toggle-sidebar-btn" class="text-xs text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 mx-auto focus:outline-none">
+                <i class="fa-solid fa-angles-left"></i> <span>Hide Sidebar</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Sidebar Toggle Indicator (when hidden) -->
+    <button id="sidebar-indicator" class="absolute left-4 top-4 z-40 w-9 h-9 rounded-full bg-slate-900 text-white shadow-lg border border-slate-800 hover:bg-slate-800 flex items-center justify-center hidden opacity-0 transition-all duration-300">
+        <i class="fa-solid fa-angles-right"></i>
+    </button>
+
+    <!-- Main Chat Pane -->
+    <div class="flex-1 flex flex-col overflow-hidden h-full">
+
+    <!-- Chat Header -->
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800 z-10">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+                <h2 class="font-bold text-gray-800 dark:text-white">AI Tutor</h2>
+                <p class="text-xs text-green-500 flex items-center"><span
+                        class="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></span> Online</p>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <button id="clear-chat-btn"
+                class="w-8 h-8 rounded-full bg-gray-50  dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 flex items-center justify-center transition"
+                title="Clear Chat">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+            <button id="save-session-btn"
+                class="w-8 h-8 rounded-full bg-gray-50  dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 flex items-center justify-center transition"
+                title="Save Session">
+                <i class="fa-regular fa-bookmark"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Info Banner (Dual Mode) -->
+    <div class="bg-blue-50 px-6 py-3 border-b border-blue-100 dark:border-slate-700 flex items-start space-x-3 text-sm text-blue-800">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <div>
+            <strong>Dual Input System:</strong> Enter a <span
+                class="font-bold underline decoration-blue-300 underline-offset-2">Topic</span> (e.g., "Deadlock") for a
+            full overview, or ask a <span
+                class="font-bold underline decoration-blue-300 underline-offset-2">Question</span> (e.g., "How to
+            prevent deadlock?") for a specific answer.
+        </div>
+    </div>
+
+    <!-- Chat Messages Area -->
+    <div id="chatbox" class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
+        <!-- AI Welcome Message -->
+        <div class="flex items-start space-x-4 max-w-[85%]">
+            <div
+                class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white shrink-0 mt-1">
+                <i class="fa-solid fa-robot text-sm"></i>
+            </div>
+            <div
+                class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm text-gray-800 dark:text-white prose   prose dark:prose-invert prose-sm max-w-none">
+                <p>Hello, {{ user.name or 'Student' }}! I'm your Smart AI Tutor. What would you like to learn today?</p>
+                <p>You can give me a topic to explain from scratch, or ask me a specific question you're stuck on.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 z-10">
+        <form id="chat-form" class="relative flex items-center">
+            <input type="text" id="user-input"
+                class="w-full pl-6 pr-16 py-4 bg-gray-50  dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-full text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition shadow-inner"
+                placeholder="Ask a full question or enter a study topic..." required>
+
+            <button type="submit" id="send-btn"
+                class="absolute right-2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-secondary transition transform hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </form>
+        <div class="mt-3 flex flex-wrap gap-2 px-2">
+            <span class="text-xs text-gray-400 font-medium">Suggestions:</span>
+            <button
+                class="suggestion-btn text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full transition">Database
+                Normalization</button>
+            <button
+                class="suggestion-btn text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full transition">Explain
+                OOP concepts</button>
+            <button
+                class="suggestion-btn text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full transition">What
+                is an API?</button>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+    $(document).ready(function () {
+        const chatForm = $('#chat-form');
+        const chatbox = $('#chatbox');
+        const userInput = $('#user-input');
+        const sendBtn = $('#send-btn');
+
+        let chatHistory = [];
+
+        // Sidebar collapse & indicators
+        const chatSidebar = $('#chat-sidebar');
+        const sidebarIndicator = $('#sidebar-indicator');
+        const toggleSidebarBtn = $('#toggle-sidebar-btn');
+
+        toggleSidebarBtn.click(function() {
+            chatSidebar.addClass('-ml-64');
+            setTimeout(() => {
+                sidebarIndicator.removeClass('hidden').addClass('opacity-100');
+            }, 300);
+        });
+
+        sidebarIndicator.click(function() {
+            sidebarIndicator.removeClass('opacity-100');
+            setTimeout(() => {
+                sidebarIndicator.addClass('hidden');
+                chatSidebar.removeClass('-ml-64');
+            }, 200);
+        });
+
+        // Load session from history sidebar
+        $('.session-item').click(function() {
+            $('.session-item').removeClass('bg-slate-800 text-white font-semibold').addClass('text-slate-300');
+            $(this).addClass('bg-slate-800 text-white font-semibold').removeClass('text-slate-300');
+
+            const content = $(this).find('.hidden-session-content').html();
+            chatbox.html(content);
+            chatHistory = []; // Reset active context
+            
+            // Re-render LaTeX math if present in detailed content
+            if (window.MathJax) {
+                MathJax.typesetPromise().catch((err) => console.log('MathJax error: ', err));
+            }
+            scrollToBottom();
+        });
+
+        // Auto-save history session ID
+        let currentSessionId = 'hs-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
+        // Start New Chat Session
+        $('#new-session-sidebar-btn').click(function() {
+            currentSessionId = 'hs-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            $('.session-item').removeClass('bg-slate-800 text-white font-semibold').addClass('text-slate-300');
+            chatbox.empty();
+            chatHistory = [];
+            // Re-append welcome message
+            chatbox.append(`
+            <div class="flex items-start space-x-4 max-w-[85%]">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white shrink-0 mt-1">
+                    <i class="fa-solid fa-robot text-sm"></i>
+                </div>
+                <div class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm text-gray-800 dark:text-white prose   prose dark:prose-invert prose-sm max-w-none">
+                    <p>Hello, {{ user.name or 'Student' }}! I'm your Smart AI Tutor. What would you like to learn today?</p>
+                    <p>You can give me a topic to explain from scratch, or ask me a specific question you're stuck on.</p>
+                </div>
+            </div>`);
+            scrollToBottom();
+        });
+
+        // Suggestion buttons
+        $('.suggestion-btn').click(function () {
+            userInput.val($(this).text());
+            chatForm.submit();
+        });
+
+        // Read query parameters to auto-trigger explanation
+        const urlParams = new URLSearchParams(window.location.search);
+        const topicParam = urlParams.get('topic');
+        if (topicParam) {
+            userInput.val(topicParam);
+            setTimeout(function () {
+                chatForm.submit();
+            }, 300);
+        }
+
+        chatForm.on('submit', function (e) {
+            e.preventDefault();
+
+            const message = userInput.val().trim();
+            if (!message) return;
+
+            // Append User Message
+            appendMessage('user', message);
+            userInput.val('');
+            sendBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+            // Scroll to bottom
+            scrollToBottom();
+
+            // Send to backend
+            $.ajax({
+                url: '/api/chat',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ message: message, history: chatHistory }),
+                success: function (response) {
+                    appendMessage('ai', response.response);
+
+                    // Update history for context
+                    chatHistory.push({ sender: 'user', text: message });
+                    chatHistory.push({ sender: 'ai', text: response.raw_text });
+
+                    // Render MathJax equations
+                    if (window.MathJax) {
+                        MathJax.typesetPromise().catch((err) => console.log('MathJax error: ', err));
+                    }
+
+                    // Auto-save history in background
+                    const firstUserMsg = chatHistory.length > 0 ? chatHistory[0].text.substring(0, 30) + '...' : 'New Chat';
+                    $.ajax({
+                        url: '/api/history',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ 
+                            session_id: currentSessionId, 
+                            title: firstUserMsg, 
+                            content: chatbox.html() 
+                        })
+                    });
+                },
+                error: function (xhr) {
+                    appendMessage('error', "Sorry, there was an error processing your request. Please ensure the API is configured.");
+                },
+                complete: function () {
+                    sendBtn.prop('disabled', false).html('<i class="fa-solid fa-paper-plane"></i>');
+                    scrollToBottom();
+                }
+            });
+        });
+
+        // Header Clear Chat Button
+        $('#clear-chat-btn').click(function () {
+            if (confirm("Are you sure you want to clear the chat history?")) {
+                chatbox.empty();
+                chatHistory = [];
+                // Re-append the welcome message
+                chatbox.append(`
+                <div class="flex items-start space-x-4 max-w-[85%]">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white shrink-0 mt-1">
+                        <i class="fa-solid fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm text-gray-800 dark:text-white prose   prose dark:prose-invert prose-sm max-w-none">
+                        <p>Hello! I'm your Smart AI Tutor. What would you like to learn today?</p>
+                    </div>
+                </div>`);
+            }
+        });
+
+        // Header Save Session Button
+        $('#save-session-btn').click(function () {
+            const btn = $(this);
+            const originalIcon = btn.html();
+            btn.html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+            const sessionContent = chatbox.html(); // Save all messages
+
+            $.ajax({
+                url: '/api/bookmarks',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ type: 'session', title: 'Saved AI Session', content: sessionContent }),
+                success: function (response) {
+                    if (response.action === 'added') {
+                        btn.html('<i class="fa-solid fa-bookmark text-accent font-bold"></i>');
+                        btn.attr('title', 'Session Saved!');
+                        alert("Session saved to your history!");
+                    } else {
+                        btn.html('<i class="fa-solid fa-bookmark"></i>');
+                        btn.attr('title', 'Save Session');
+                        alert("Session removed from your history!");
+                    }
+                    window.location.reload(); // Reload to refresh history list!
+                },
+                error: function (err) {
+                    btn.html(originalIcon);
+                    alert("Failed to save session.");
+                }
+            });
+        });
+
+        // Event delegation for dynamically added bookmark buttons
+        chatbox.on('click', '.bookmark-btn', function () {
+            const btn = $(this);
+            const originalIcon = btn.html();
+            btn.html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+            const content = btn.closest('.flex.items-start').find('.ai-response').html();
+            // Create a simple text title from the HTML content
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = content || "";
+            const plainText = tempDiv.textContent || tempDiv.innerText || "";
+            const title = "AI Tutor: " + plainText.substring(0, 30).trim() + "...";
+
+            $.ajax({
+                url: '/api/bookmarks',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ type: 'chat', title: title, content: content || "" }),
+                success: function (response) {
+                    if (response.action === 'added') {
+                        btn.html('<i class="fa-solid fa-bookmark"></i>');
+                        btn.removeClass('text-gray-400 hover:text-accent').addClass('text-accent font-bold');
+                        btn.attr('title', 'Saved to Bookmarks!');
+                        alert("Added to Bookmarks!");
+                    } else {
+                        btn.html('<i class="fa-solid fa-bookmark"></i>');
+                        btn.removeClass('text-accent font-bold').addClass('text-gray-400 hover:text-accent');
+                        btn.attr('title', 'Save this explanation');
+                        alert("Removed from Bookmarks!");
+                    }
+                },
+                error: function (err) {
+                    btn.html(originalIcon);
+                    alert("Failed to save bookmark.");
+                }
+            });
+        });
+
+        // Generate Quiz from chat response
+        chatbox.on('click', '.generate-quiz-btn', function () {
+            let topic = "";
+            const userMsgContainer = $(this).closest('.flex.items-start').prev('.flex.items-start.justify-end');
+            if (userMsgContainer.length) {
+                topic = userMsgContainer.text().trim();
+            } else if (chatHistory.length > 0) {
+                topic = chatHistory[chatHistory.length - 2].text;
+            } else {
+                topic = "AI Explanation";
+            }
+            // Strip system prompt or helper tokens if they were prepended
+            if (topic.includes("User Input:")) {
+                topic = topic.split("User Input:").pop();
+            }
+            topic = topic.substring(0, 50).trim();
+            window.location.href = "/quiz?topic=" + encodeURIComponent(topic);
+        });
+
+        function appendMessage(sender, content) {
+            let html = '';
+            if (sender === 'user') {
+                html = `
+                <div class="flex items-start justify-end space-x-4 ml-auto max-w-[85%]">
+                    <div class="bg-primary text-white p-4 rounded-2xl rounded-tr-none shadow-sm max-w-none">
+                        ${content}
+                    </div>
+                </div>`;
+            } else if (sender === 'ai') {
+                html = `
+                <div class="flex items-start space-x-4 max-w-[95%]">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white shrink-0 mt-1">
+                        <i class="fa-solid fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-6 rounded-2xl rounded-tl-none shadow-sm text-gray-800 dark:text-white prose   prose dark:prose-invert prose-slate max-w-none ai-response">
+                        ${content}
+                    </div>
+                    <div class="flex flex-col space-y-2 mt-2 opacity-0 hover:opacity-100 transition">
+                        <button class="bookmark-btn text-gray-400 hover:text-accent transition" title="Save this explanation"><i class="fa-regular fa-bookmark"></i></button>
+                        <button class="generate-quiz-btn text-gray-400 hover:text-accent transition" title="Generate a quiz on this"><i class="fa-solid fa-list-check"></i></button>
+                    </div>
+                </div>`;
+            } else if (sender === 'error') {
+                html = `
+                <div class="flex items-start space-x-4 max-w-[85%]">
+                    <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-white shrink-0 mt-1">
+                        <i class="fa-solid fa-exclamation text-sm"></i>
+                    </div>
+                    <div class="bg-red-50 border border-red-100 dark:border-slate-700 p-4 rounded-2xl rounded-tl-none text-red-800 text-sm">
+                        ${content}
+                    </div>
+                </div>`;
+            }
+            chatbox.append(html);
+        }
+
+        function scrollToBottom() {
+            chatbox.animate({ scrollTop: chatbox[0].scrollHeight }, 300);
+        }
+    });
+</script>
+<style>
+    /* Styling for markdown content returned by backend */
+    .prose h1,
+    .prose h2,
+    .prose h3 {
+        color: #0f172a;
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .dark .prose h1,
+    .dark .prose h2,
+    .dark .prose h3 {
+        color: #f8fafc;
+    }
+
+    .prose p {
+        margin-bottom: 1em;
+        line-height: 1.6;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .prose strong {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .dark .prose strong {
+        color: #f8fafc;
+    }
+
+    .prose pre {
+        background-color: #1e293b;
+        color: #f8fafc;
+        padding: 1em;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 1em;
+    }
+
+    .dark .prose pre {
+        background-color: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+    }
+
+    .prose code {
+        background-color: #f1f5f9;
+        padding: 0.2em 0.4em;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+        color: #db2777;
+    }
+
+    .dark .prose code {
+        background-color: #334155;
+        color: #f472b6;
+    }
+</style>
+{% endblock %}

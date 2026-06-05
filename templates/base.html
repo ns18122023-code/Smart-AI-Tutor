@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart AI Tutor{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a', // dark blue
+                        secondary: '#4c1d95', // purple
+                        accent: '#06b6d4', // cyan
+                        light: '#f8fafc', // almost white
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block extra_head %}{% endblock %}
+    <script>
+        if (localStorage.theme === 'light') {
+            document.documentElement.classList.remove('dark')
+        } else {
+            document.documentElement.classList.add('dark')
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
+    {% if not is_auth_page %}
+    <!-- Sidebar -->
+    <aside class="w-64 bg-primary text-white flex flex-col hidden md:flex transition-all duration-300 dark:bg-slate-950 dark:border-r dark:border-slate-800">
+        <div class="h-16 flex items-center justify-center border-b border-gray-700">
+            <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-400">
+                <i class="fa-solid fa-graduation-cap mr-2"></i>AI Tutor
+            </span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-2 px-4">
+                <li>
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'dashboard' %}bg-secondary{% endif %}">
+                        <i class="fa-solid fa-chart-pie w-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('tutor') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'tutor' %}bg-secondary{% endif %}">
+                        <i class="fa-solid fa-robot w-5"></i>
+                        <span>AI Tutor</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('quiz') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'quiz' %}bg-secondary{% endif %}">
+                        <i class="fa-solid fa-list-check w-5"></i>
+                        <span>Quiz Generator</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('pdf_summarizer') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'pdf_summarizer' %}bg-secondary{% endif %}">
+                        <i class="fa-solid fa-book-open w-5"></i>
+                        <span>PDF Summarizer</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('bookmarks') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'bookmarks' %}bg-secondary{% endif %}">
+                        <i class="fa-solid fa-bookmark w-5"></i>
+                        <span>Bookmarks</span>
+                    </a>
+                </li>
+                <li>
+                    <button id="themeToggleBtn" class="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 text-left focus:outline-none">
+                        <i class="fa-solid fa-moon w-5 dark:hidden"></i>
+                        <i class="fa-solid fa-sun w-5 hidden dark:inline-block text-amber-400"></i>
+                        <span class="dark:hidden">Dark Mode</span>
+                        <span class="hidden dark:inline-block">Light Mode</span>
+                    </button>
+                </li>
+            </ul>
+            
+            {% if user and user.email == 'admin@aitutor.com' %}
+            <div class="mt-8 px-4">
+                <h3 class="text-xs uppercase text-gray-400 font-semibold mb-2">Admin</h3>
+                <a href="{{ url_for('admin') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition duration-200 {% if request.endpoint == 'admin' %}bg-secondary{% endif %}">
+                    <i class="fa-solid fa-shield-halved w-5"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+        <div class="p-4 border-t border-gray-700">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-white font-bold">
+                    {{ user.email[0] | upper if user else 'U' }}
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-sm font-medium truncate">{{ user.name or 'Student' }}</p>
+                    <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="flex items-center justify-center w-full space-x-2 p-2 bg-gray-800 hover:bg-red-600 rounded-lg text-sm transition duration-200">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+        {% if not is_auth_page %}
+        <!-- Top Navbar for mobile -->
+        <header class="md:hidden h-16 bg-white dark:bg-slate-950 dark:border-b dark:border-slate-800 shadow-sm flex items-center justify-between px-4 z-10 transition-colors duration-300">
+            <div class="text-xl font-bold text-primary dark:text-white">
+                <i class="fa-solid fa-graduation-cap text-accent mr-2"></i>AI Tutor
+            </div>
+            <button id="mobileMenuBtn" class="text-gray-600 focus:outline-none">
+                <i class="fa-solid fa-bars text-2xl"></i>
+            </button>
+        </header>
+        {% endif %}
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto {% if not is_auth_page %}p-4 md:p-8{% endif %}">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Mobile Menu Overlay (Hidden by default) -->
+    <div id="mobileMenu" class="fixed inset-0 bg-primary z-50 transform translate-x-full transition-transform duration-300 md:hidden flex flex-col text-white">
+        <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
+            <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-400">Menu</span>
+            <button id="closeMenuBtn" class="text-gray-300 hover:text-white focus:outline-none">
+                <i class="fa-solid fa-times text-2xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-4 px-4 space-y-2">
+            <a href="{{ url_for('dashboard') }}" class="block p-3 rounded hover:bg-secondary {% if request.endpoint == 'dashboard' %}bg-secondary{% endif %}">Dashboard</a>
+            <a href="{{ url_for('tutor') }}" class="block p-3 rounded hover:bg-secondary {% if request.endpoint == 'tutor' %}bg-secondary{% endif %}">AI Tutor</a>
+            <a href="{{ url_for('quiz') }}" class="block p-3 rounded hover:bg-secondary {% if request.endpoint == 'quiz' %}bg-secondary{% endif %}">Quiz</a>
+            <a href="{{ url_for('pdf_summarizer') }}" class="block p-3 rounded hover:bg-secondary {% if request.endpoint == 'pdf_summarizer' %}bg-secondary{% endif %}">PDF Summarizer</a>
+            <a href="{{ url_for('bookmarks') }}" class="block p-3 rounded hover:bg-secondary {% if request.endpoint == 'bookmarks' %}bg-secondary{% endif %}">Bookmarks</a>
+            <a href="{{ url_for('logout') }}" class="block p-3 rounded bg-red-600 hover:bg-red-700 mt-8 text-center">Logout</a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Theme toggle logic
+        const themeToggleBtns = document.querySelectorAll('#themeToggleBtn, #mobileThemeToggleBtn');
+        themeToggleBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.theme = 'light';
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.theme = 'dark';
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

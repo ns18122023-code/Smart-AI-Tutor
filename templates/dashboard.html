@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart AI Tutor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Welcome Section -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-accent/20 to-purple-500/10 rounded-full blur-3xl -z-10"></div>
+        <div class="flex flex-col md:flex-row md:items-center justify-between z-10 relative">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Welcome back, {{ user.name or 'Student' }}! 👋</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">Ready to conquer your learning goals today?</p>
+            </div>
+            <div class="mt-6 md:mt-0">
+                <a href="{{ url_for('tutor') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-accent to-purple-600 text-white px-6 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transform transition hover:-translate-y-0.5">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>Start New Session</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Stat Card 1 -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-4 hover:shadow-md transition duration-300">
+            <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-fire"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Study Streak</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">{{ stats.study_streak }} Days</h3>
+            </div>
+        </div>
+        
+        <!-- Stat Card 2 -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-4 hover:shadow-md transition duration-300">
+            <div class="w-14 h-14 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Topics Mastered</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">{{ stats.topics_mastered }}</h3>
+            </div>
+        </div>
+
+        <!-- Stat Card 3 -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-4 hover:shadow-md transition duration-300">
+            <div class="w-14 h-14 rounded-full bg-green-50 text-green-500 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-bullseye"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Quiz Score</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">{{ stats.avg_quiz_score }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Activity & Weakness -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- PDF Summarizer -->
+            <div class="bg-gradient-to-r from-blue-50 dark:from-slate-800 to-indigo-50 dark:to-slate-800 rounded-2xl shadow-sm border border-blue-100 dark:border-slate-700 p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">AI PDF Summarizer</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 mb-4 text-sm">Upload a chapter or paper, and the AI will generate a concise summary to save you time.</p>
+                <form id="pdf-form" class="flex flex-col sm:flex-row gap-3">
+                    <input type="file" id="pdf-file" accept=".pdf" class="flex-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition cursor-pointer bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700" required>
+                    <button type="submit" id="summarize-btn" class="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition flex items-center justify-center">
+                        <i class="fa-solid fa-bolt mr-2"></i> Summarize
+                    </button>
+                </form>
+                <div id="summary-result-container" class="mt-4 hidden animate-fade-in">
+                    <div class="flex items-center justify-between bg-gray-50  dark:bg-slate-900 p-3 rounded-t-xl border border-gray-200 dark:border-slate-700 border-b-0">
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"><i class="fa-solid fa-file-invoice mr-1"></i> Generated Summary</span>
+                        <div class="flex items-center space-x-2">
+                            <button id="dashboard-download-btn" disabled class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 flex items-center justify-center shadow-sm border border-gray-150 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Download Summary as Markdown">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <button id="dashboard-bookmark-btn" disabled class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-gray-400 hover:text-accent flex items-center justify-center shadow-sm border border-gray-150 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Save to Bookmarks">
+                                <i class="fa-regular fa-bookmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="summary-result" class="p-4 bg-white dark:bg-slate-800 rounded-b-xl border border-gray-200 dark:border-slate-700 prose   prose dark:prose-invert prose-sm max-w-none shadow-inner text-gray-800 dark:text-white max-h-96 overflow-y-auto">
+                        <!-- Summary content will go here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Recent Activity</h2>
+                    <button id="view-all-activities-btn" class="text-sm text-accent hover:underline font-medium focus:outline-none">View All</button>
+                </div>
+                
+                <div class="space-y-6">
+                    {% for activity in activities[:5] %}
+                    <div class="flex items-start space-x-4">
+                        {% if activity.type == 'chat' %}
+                        <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        {% elif activity.type == 'quiz' %}
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        {% else %}
+                        <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-1 border-b border-gray-100 dark:border-slate-700 pb-4">
+                            <div class="flex items-center justify-between cursor-pointer activity-header">
+                                <h4 class="font-medium text-gray-800 dark:text-white hover:text-purple-600 transition">{{ activity.title }}</h4>
+                                <span class="w-6 h-6 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 flex items-center justify-center text-gray-400 transition-all duration-300 arrow-icon">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden activity-desc">{{ activity.description | safe }}</p>
+                            <span class="text-xs text-gray-400 mt-2 block">{{ activity.created_at }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 italic text-sm">No recent activity yet. Start a session!</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Weakness Detection (Dynamic) -->
+            {% if weakness %}
+            <div class="bg-gradient-to-br from-red-50 dark:from-slate-800 to-orange-50 dark:to-slate-800 rounded-2xl shadow-sm border border-red-100 dark:border-slate-700 p-6 animate-fade-in">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Weakness Detected</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 mb-4">Based on your recent quizzes, you are struggling with <strong class="text-gray-800 dark:text-white">{{ weakness.topic }}</strong> (Avg score: {{ weakness.score }}%).</p>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('tutor', topic=weakness.topic) }}" class="px-4 py-2 bg-white dark:bg-slate-800 text-red-600 rounded-lg text-sm font-medium border border-red-200 hover:bg-red-50 transition">Review Topic</a>
+                    <a href="{{ url_for('quiz', topic=weakness.topic) }}" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">Take Practice Quiz</a>
+                </div>
+            </div>
+            {% else %}
+            <!-- Learning Analytics (Clean Onboarding State) -->
+            <div class="bg-gradient-to-br from-blue-50 dark:from-slate-800 to-indigo-50 dark:to-slate-800 rounded-2xl shadow-sm border border-blue-100 dark:border-slate-700 p-6 animate-fade-in">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Learning Analytics</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 mb-4">You have a completely clean slate! Complete your first AI-generated quiz to unlock personalized topic tracking and weakness insights.</p>
+                <div class="flex">
+                    <a href="{{ url_for('quiz') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Generate First Quiz</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Study Planner -->
+        <div class="space-y-8">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Study Planner</h2>
+                    <button class="text-gray-400 hover:text-accent"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                
+                <div class="space-y-4">
+                    {% for task in tasks %}
+                    <label class="flex items-center space-x-3 p-3 {% if task.is_completed %}bg-gray-50{% else %}border border-gray-100 dark:border-slate-700{% endif %} rounded-lg cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition">
+                        <input type="checkbox" class="task-checkbox w-5 h-5 rounded border-gray-300 dark:border-slate-600 text-accent focus:ring-accent" data-id="{{ task.id }}" data-title="{{ task.title }}" {% if task.is_completed %}checked{% endif %}>
+                        <span class="{% if task.is_completed %}text-gray-500 dark:text-gray-400 line-through{% else %}text-gray-800 dark:text-white font-medium{% endif %}">{{ task.title }}</span>
+                        {% if task.priority == 'High' %}
+                        <span class="ml-auto text-xs font-semibold px-2 py-1 bg-red-100 text-red-600 rounded">High</span>
+                        {% elif task.priority == 'Med' %}
+                        <span class="ml-auto text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-600 rounded">Med</span>
+                        {% else %}
+                        <span class="ml-auto text-xs font-semibold px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded">Low</span>
+                        {% endif %}
+                    </label>
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 italic text-sm">No tasks added yet.</p>
+                    {% endfor %}
+                </div>
+                
+                <button id="add-task-btn" class="w-full mt-6 py-2 border border-dashed border-gray-300 dark:border-slate-600 rounded-lg text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 transition hover:border-gray-400">
+                    + Add Task
+                </button>
+            </div>
+            
+            <!-- Bookmarks -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                 <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Saved Resources</h2>
+                 <ul class="space-y-3">
+                     {% for bookmark in bookmarks %}
+                     <li>
+                         <a href="{{ url_for('bookmarks') }}" class="group flex items-center space-x-3 hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 p-2 rounded-lg transition">
+                             <div class="w-8 h-8 rounded flex items-center justify-center transition shrink-0 {% if bookmark.type == 'pdf' %}bg-blue-50 text-blue-500{% elif bookmark.type == 'chat' %}bg-purple-50 text-purple-500{% elif bookmark.type == 'session' %}bg-green-50 text-green-500{% else %}bg-amber-50 text-amber-500{% endif %}">
+                                 {% if bookmark.type == 'pdf' %}<i class="fa-solid fa-file-pdf"></i>
+                                 {% elif bookmark.type == 'chat' %}<i class="fa-solid fa-robot"></i>
+                                 {% elif bookmark.type == 'session' %}<i class="fa-solid fa-comments"></i>
+                                 {% else %}<i class="fa-solid fa-lightbulb"></i>
+                                 {% endif %}
+                             </div>
+                             <span class="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-gray-900 dark:hover:text-white dark:text-white truncate">{{ bookmark.title }}</span>
+                         </a>
+                     </li>
+                     {% else %}
+                     <p class="text-gray-500 dark:text-gray-400 italic text-sm">No saved resources yet.</p>
+                     {% endfor %}
+                 </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Beautiful Activities Modal -->
+<div id="activitiesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-all duration-300">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl h-[75vh] flex flex-col shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-95 transition-all duration-300" id="activitiesModalContent">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50/50">
+            <h3 class="font-bold text-gray-800 dark:text-white text-base flex items-center"><i class="fa-solid fa-clock-rotate-left text-accent mr-2"></i> All Learning Activities</h3>
+            <button id="closeActivitiesModalBtn" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 focus:outline-none"><i class="fa-solid fa-times text-lg"></i></button>
+        </div>
+        <!-- Modal Content -->
+        <div class="flex-1 p-6 overflow-y-auto space-y-4" id="all-activities-list">
+            {% for activity in activities %}
+            <div class="flex items-start space-x-4 border-b border-gray-50 pb-3">
+                {% if activity.type == 'chat' %}
+                <div class="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-robot text-xs"></i>
+                </div>
+                {% elif activity.type == 'quiz' %}
+                <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-list-check text-xs"></i>
+                </div>
+                {% else %}
+                <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-file-pdf text-xs"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <h4 class="font-medium text-gray-800 dark:text-white text-sm">{{ activity.title }}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ activity.description | safe }}</p>
+                    <span class="text-[10px] text-gray-400 mt-1 block">{{ activity.created_at }}</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 dark:text-gray-400 italic text-sm text-center py-8">No activities recorded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Sleek Task Modal -->
+<div id="taskModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-all duration-300">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-95 transition-all duration-300" id="taskModalContent">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center"><i class="fa-solid fa-calendar-plus text-accent mr-2"></i> Create Study Task</h3>
+            <button id="closeTaskModalBtn" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 focus:outline-none"><i class="fa-solid fa-times text-lg"></i></button>
+        </div>
+        <form id="modal-task-form" class="space-y-4">
+            <div>
+                <label for="taskTitle" class="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Task Description</label>
+                <input type="text" id="taskTitle" required class="w-full px-4 py-2.5 bg-gray-50  dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent transition text-gray-800 dark:text-white" placeholder="e.g. Read Operating Systems Chapter 4">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Priority Level</label>
+                <div class="grid grid-cols-3 gap-3" id="priorityContainer">
+                    <label class="priority-label border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 flex items-center justify-center cursor-pointer hover:bg-red-50 hover:border-red-200 transition">
+                        <input type="radio" name="taskPriority" value="High" class="sr-only">
+                        <span class="text-xs font-semibold text-red-600">🔴 High</span>
+                    </label>
+                    <label class="priority-label border border-blue-500 bg-blue-50/50 rounded-lg p-2.5 flex items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition">
+                        <input type="radio" name="taskPriority" value="Med" checked class="sr-only">
+                        <span class="text-xs font-semibold text-blue-600">🔵 Med</span>
+                    </label>
+                    <label class="priority-label border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 flex items-center justify-center cursor-pointer hover:bg-gray-50  dark:hover:bg-slate-700  dark:bg-slate-900 hover:border-gray-300 dark:border-slate-600 transition">
+                        <input type="radio" name="taskPriority" value="Low" class="sr-only">
+                        <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">⚪ Low</span>
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="w-full mt-6 py-3 bg-gradient-to-r from-accent to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-bold rounded-lg shadow-md transition transform hover:-translate-y-0.5">
+                Create Task
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let lastGeneratedSummary = "";
+    let lastGeneratedMarkdown = "";
+    let lastGeneratedTitle = "";
+
+    document.getElementById('pdf-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('pdf-file');
+        if (!fileInput.files.length) return;
+        
+        const btn = document.getElementById('summarize-btn');
+        const originalBtnHtml = btn.innerHTML;
+        const resultArea = document.getElementById('summary-result');
+        const resultContainer = document.getElementById('summary-result-container');
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...';
+        btn.disabled = true;
+        resultContainer.classList.add('hidden');
+        
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        fetch('/api/summarize_pdf', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            
+            if(data.error) {
+                alert("Error: " + data.error);
+                return;
+            }
+            
+            lastGeneratedSummary = data.summary;
+            lastGeneratedMarkdown = data.raw_markdown || "";
+            lastGeneratedTitle = "Summary: " + fileInput.files[0].name.replace('.pdf', '');
+
+            resultArea.innerHTML = data.summary;
+            resultContainer.classList.remove('hidden');
+
+            const dBookmarkBtn = document.getElementById('dashboard-bookmark-btn');
+            dBookmarkBtn.disabled = false;
+            dBookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+            dBookmarkBtn.classList.remove('text-accent', 'font-bold');
+            dBookmarkBtn.classList.add('text-gray-400');
+            
+            const dDownloadBtn = document.getElementById('dashboard-download-btn');
+            dDownloadBtn.disabled = false;
+            dDownloadBtn.classList.remove('text-blue-600');
+            dDownloadBtn.classList.add('text-gray-400');
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to summarize PDF.");
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+        });
+    });
+
+    // Dashboard PDF Summarizer Actions
+    document.getElementById('dashboard-bookmark-btn').addEventListener('click', function() {
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        fetch('/api/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'pdf',
+                title: lastGeneratedTitle,
+                content: lastGeneratedSummary
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            if (data.success) {
+                if (data.action === 'added') {
+                    btn.innerHTML = '<i class="fa-solid fa-bookmark"></i>';
+                    btn.classList.remove('text-gray-400');
+                    btn.classList.add('text-accent', 'font-bold');
+                    btn.title = "Saved to Bookmarks!";
+                    alert("Saved to Bookmarks!");
+                } else {
+                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                    btn.classList.remove('text-accent', 'font-bold');
+                    btn.classList.add('text-gray-400');
+                    btn.title = "Save to Bookmarks";
+                    alert("Removed from Bookmarks!");
+                }
+                window.location.reload(); // Reload to refresh Saved Resources list!
+            } else {
+                alert("Failed to bookmark.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            alert("An error occurred.");
+        });
+    });
+
+    document.getElementById('dashboard-download-btn').addEventListener('click', function() {
+        if (!lastGeneratedMarkdown) return;
+        const filename = lastGeneratedTitle.replace('Summary: ', '') + "_summary.md";
+        const blob = new Blob([lastGeneratedMarkdown], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Task Planner Interactions
+    const taskModal = document.getElementById('taskModal');
+    const taskModalContent = document.getElementById('taskModalContent');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const closeTaskModalBtn = document.getElementById('closeTaskModalBtn');
+    const modalTaskForm = document.getElementById('modal-task-form');
+
+    function openModal() {
+        taskModal.classList.remove('hidden');
+        setTimeout(() => {
+            taskModal.classList.remove('opacity-0');
+            taskModalContent.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeModal() {
+        taskModal.classList.add('opacity-0');
+        taskModalContent.classList.add('scale-95');
+        setTimeout(() => {
+            taskModal.classList.add('hidden');
+        }, 300);
+    }
+
+    if (addTaskBtn) addTaskBtn.addEventListener('click', openModal);
+    if (closeTaskModalBtn) closeTaskModalBtn.addEventListener('click', closeModal);
+    
+    // Close modal if clicked outside
+    taskModal.addEventListener('click', function(e) {
+        if (e.target === taskModal) closeModal();
+    });
+
+    // Style Priority selection
+    document.querySelectorAll('.priority-label').forEach(label => {
+        label.addEventListener('click', function() {
+            document.querySelectorAll('.priority-label').forEach(l => {
+                l.classList.remove('border-blue-500', 'bg-blue-50/50', 'border-red-500', 'bg-red-50/50', 'border-gray-500', 'bg-gray-50/50');
+                l.classList.add('border-gray-200', 'dark:border-slate-700');
+            });
+            
+            const radio = this.querySelector('input');
+            radio.checked = true;
+            this.classList.remove('border-gray-200', 'dark:border-slate-700');
+            
+            if (radio.value === 'High') {
+                this.classList.add('border-red-500', 'bg-red-50/50');
+            } else if (radio.value === 'Med') {
+                this.classList.add('border-blue-500', 'bg-blue-50/50');
+            } else {
+                this.classList.add('border-gray-500', 'bg-gray-50/50');
+            }
+        });
+    });
+
+    modalTaskForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const title = document.getElementById('taskTitle').value.trim();
+        const priority = document.querySelector('input[name="taskPriority"]:checked').value;
+        
+        if (!title) return;
+        
+        fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', title: title, priority: priority })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            }
+        });
+    });
+
+    // Task Checkbox Toggle
+    document.querySelectorAll('.task-checkbox').forEach(box => {
+        box.addEventListener('change', function() {
+            const taskId = this.getAttribute('data-id');
+            const title = this.getAttribute('data-title');
+            
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle', id: taskId, title: title })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload(); // Reload to update styles
+                }
+            });
+        });
+    });
+
+    // Recent Activities Modal Interactions
+    const activitiesModal = document.getElementById('activitiesModal');
+    const activitiesModalContent = document.getElementById('activitiesModalContent');
+    const viewAllActivitiesBtn = document.getElementById('view-all-activities-btn');
+    const closeActivitiesModalBtn = document.getElementById('closeActivitiesModalBtn');
+
+    function openActivitiesModal() {
+        activitiesModal.classList.remove('hidden');
+        setTimeout(() => {
+            activitiesModal.classList.remove('opacity-0');
+            activitiesModalContent.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeActivitiesModal() {
+        activitiesModal.classList.add('opacity-0');
+        activitiesModalContent.classList.add('scale-95');
+        setTimeout(() => {
+            activitiesModal.classList.add('hidden');
+        }, 300);
+    }
+
+    if (viewAllActivitiesBtn) viewAllActivitiesBtn.addEventListener('click', openActivitiesModal);
+    if (closeActivitiesModalBtn) closeActivitiesModalBtn.addEventListener('click', closeActivitiesModal);
+    
+    // Close modal if clicked outside
+    activitiesModal.addEventListener('click', function(e) {
+        if (e.target === activitiesModal) closeActivitiesModal();
+    });
+
+    // Recent Activity Description Toggle
+    document.querySelectorAll('.activity-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const container = this.parentElement;
+            const desc = container.querySelector('.activity-desc');
+            const arrow = this.querySelector('.arrow-icon');
+            
+            if (desc.classList.contains('hidden')) {
+                desc.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                desc.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        });
+    });
+</script>
+{% endblock %}

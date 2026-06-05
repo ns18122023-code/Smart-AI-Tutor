@@ -1,0 +1,68 @@
+/* Custom Styles for Smart AI Tutor */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+/* Base animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-response {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Glassmorphism utilities */
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Markdown prose overrides */
+.prose {
+    color: #334155;
+}
+.prose a {
+    color: #06b6d4;
+    text-decoration: none;
+}
+.prose a:hover {
+    text-decoration: underline;
+}
+
+/* Global Button Click Feedback */
+button:active, 
+a.btn:active,
+.btn:active,
+a[class*="bg-"]:active,
+[role="button"]:active {
+    transform: scale(0.95) !important;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    opacity: 0.9 !important;
+}
