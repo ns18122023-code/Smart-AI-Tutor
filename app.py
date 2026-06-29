@@ -37,6 +37,27 @@ from email_validator import validate_email  # type: ignore
 
 # Helper functions for isolated per-user mock session storage
 import hashlib
+import time
+import re
+
+def call_gemini_with_retry(func, *args, **kwargs):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in error_str and "retry in" in error_str and attempt < max_retries - 1:
+                wait_time = 30
+                match = re.search(r"retry in ([\d\.]+)s", error_str)
+                if match:
+                    wait_time = float(match.group(1)) + 1
+                if wait_time > 10:
+                    raise e # Don't hang the UI for more than 10 seconds
+                print(f"Rate limit hit. Retrying in {wait_time:.1f} seconds...")
+                time.sleep(wait_time)
+            else:
+                raise e
 
 def get_user_id():
     return session.get('user', {}).get('id', 'default_user')
@@ -157,7 +178,7 @@ def update_mock_streak(uid):
     session.modified = True
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-123")
@@ -237,6 +258,20 @@ def login():
         except Exception as e:
             return render_template('auth.html', is_login=True, error=str(e))
     return render_template('auth.html', is_login=True)
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        try:
+            if supabase:
+                supabase.auth.reset_password_email(email)
+            return render_template('auth.html', is_login=True, success="If an account with that email exists, a password reset link has been sent.")
+        except Exception as e:
+            return render_template('auth.html', is_forgot=True, error=str(e))
+    return render_template('auth.html', is_forgot=True)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -729,7 +764,7 @@ def api_chat():
         # Prepend system prompt to the actual message so the model always remembers its persona
         full_message = f"{sys_prompt}\n\nUser Input: {message}"
         
-        response = chat.send_message(full_message)
+        response = call_gemini_with_retry(chat.send_message, full_message)
         
         # Log activity
         log_activity(session['user'].get('id', '1234'), 'chat', f'Asked: "{message[:30]}..."', 'Interacted with AI Tutor.')
@@ -775,7 +810,7 @@ def api_generate_quiz():
     """
     
     try:
-        response = model.generate_content(sys_prompt)
+        response = call_gemini_with_retry(model.generate_content, sys_prompt)
         response_text = response.text.strip()
         if response_text.startswith("```json"):
             response_text = response_text[7:-3].strip()
@@ -807,18 +842,27 @@ def api_summarize_pdf():
     if file and file.filename.endswith('.pdf'):
         try:
             # Save file temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
-                file.save(temp_pdf.name)
-                temp_pdf_path = temp_pdf.name
+            fd, temp_pdf_path = tempfile.mkstemp(suffix='.pdf')
+            os.close(fd)
+            file.save(temp_pdf_path)
             
             # Upload to Gemini File API
             # Gemini handles OCR for scanned PDFs natively
             uploaded_file = genai.upload_file(path=temp_pdf_path, display_name=file.filename)
             
+            # Wait for Gemini to process the PDF
+            import time
+            while uploaded_file.state.name == "PROCESSING":
+                time.sleep(2)
+                uploaded_file = genai.get_file(uploaded_file.name)
+                
+            if uploaded_file.state.name == "FAILED":
+                raise Exception("Gemini failed to process the uploaded PDF.")
+            
             # Generate content using the uploaded file
             sys_prompt = "You are an expert summarizer. Please provide a comprehensive summary of the provided document. Structure the summary with a main overview, key points in bullet points, and any notable conclusions. Format the response in Markdown."
             
-            response = model.generate_content([sys_prompt, uploaded_file])
+            response = call_gemini_with_retry(model.generate_content, [sys_prompt, uploaded_file])
             
             # Clean up the file from Gemini
             genai.delete_file(uploaded_file.name)
